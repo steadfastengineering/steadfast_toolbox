@@ -110,11 +110,15 @@ function computeLinkGeometry(theta) {
 
 function drawLinkDiagram(theta) {
   const box = computeLinkGeometry(theta);
-  const width = box.xMax - box.xMin;
-  const height = box.yTop - box.yBottom;
+  const xMin = Math.floor(box.xMin);
+  const xMax = Math.ceil(box.xMax);
+  const yBot = Math.floor(box.yBottom);
+  const yTop = Math.ceil(box.yTop);
+  const width = xMax - xMin;
+  const height = yTop - yBot;
   const point = (x, y) => ({
-    x: x - box.xMin,
-    y: box.yTop - y,
+    x: x - xMin,
+    y: yTop - y,
   });
   const pixelsWide = plot.clientWidth || 640;
   const unit = width / pixelsWide;
@@ -123,38 +127,38 @@ function drawLinkDiagram(theta) {
   plot.setAttribute("viewBox", `0 0 ${width} ${height}`);
   plot.replaceChildren();
 
-  for (let x = Math.ceil(box.xMin); x <= box.xMax; x += 1) {
-    const from = point(x, box.yBottom);
-    const to = point(x, box.yTop);
+  for (let x = xMin; x <= xMax; x += 1) {
+    const from = point(x, yBot);
+    const to = point(x, yTop);
     plot.append(svgEl("line", {
       x1: from.x, y1: from.y, x2: to.x, y2: to.y,
       stroke: GRID_COLOR, "stroke-width": 1, "vector-effect": "non-scaling-stroke",
     }));
   }
-  for (let y = Math.ceil(box.yBottom); y <= box.yTop; y += 1) {
-    const from = point(box.xMin, y);
-    const to = point(box.xMax, y);
+  for (let y = yBot; y <= yTop; y += 1) {
+    const from = point(xMin, y);
+    const to = point(xMax, y);
     plot.append(svgEl("line", {
       x1: from.x, y1: from.y, x2: to.x, y2: to.y,
       stroke: GRID_COLOR, "stroke-width": 1, "vector-effect": "non-scaling-stroke",
     }));
   }
 
-  const frameTop = point(FRAME_X, box.yTop);
-  const frameBottom = point(FRAME_X, box.yBottom);
+  const frameTop = point(FRAME_X, yTop);
+  const frameBottom = point(FRAME_X, yBot);
   plot.append(svgEl("line", {
     x1: frameTop.x, y1: frameTop.y, x2: frameBottom.x, y2: frameBottom.y,
     stroke: FRAME_COLOR, "stroke-width": 2, "vector-effect": "non-scaling-stroke",
   }));
 
-  const axleLeft = point(box.xMin, 0);
-  const axleRight = point(box.xMax, 0);
+  const axleLeft = point(xMin, 0);
+  const axleRight = point(xMax, 0);
   plot.append(svgEl("line", {
     x1: axleLeft.x, y1: axleLeft.y, x2: axleRight.x, y2: axleRight.y,
     stroke: AXLE_COLOR, "stroke-width": 2, "vector-effect": "non-scaling-stroke",
   }));
 
-  const frameLabel = point(FRAME_X - 0.18, (box.yBottom + box.yTop) / 2);
+  const frameLabel = point(FRAME_X - 0.18, (yBot + yTop) / 2);
   plot.append(svgEl("text", {
     x: frameLabel.x,
     y: frameLabel.y,
@@ -232,7 +236,7 @@ function drawLinkDiagram(theta) {
       "stroke-dasharray": "6 4",
       "vector-effect": "non-scaling-stroke",
     }));
-    const note = point(OUTBOARD_X + 0.18, (box.yBottom + box.yTop) / 2);
+    const note = point(OUTBOARD_X + 0.18, (yBot + yTop) / 2);
     plot.append(svgEl("text", {
       x: note.x,
       y: note.y,
@@ -244,8 +248,8 @@ function drawLinkDiagram(theta) {
     }, "0° link does not meet the frame"));
   }
 
-  const xLabel = point((box.xMin + box.xMax) / 2, box.yBottom + 0.28);
-  const yLabel = point(box.xMin + 0.2, (box.yBottom + box.yTop) / 2);
+  const xLabel = point((xMin + xMax) / 2, yBot + 0.28);
+  const yLabel = point(xMin + 0.2, (yBot + yTop) / 2);
   plot.append(svgEl("text", {
     x: xLabel.x, y: xLabel.y, fill: "#1f9a32", "font-size": fontSize * 0.85,
     "font-family": "inherit", "text-anchor": "middle",
@@ -333,19 +337,29 @@ function readSagittaInputs() {
 function drawSagitta({ radius, chord }) {
   const half = chord / 2;
   const sagitta = radius - Math.sqrt(radius * radius - half * half);
-  const margin = Math.max(chord, sagitta) * 0.12;
-  const xMin = -margin;
-  const xMax = sagitta + margin;
-  const yMin = -margin;
-  const yMax = chord + margin;
+  // Center sits off the chord so both chord endpoints lie on the circle.
+  const centerX = sagitta - radius;
+  const centerY = half;
+  const pad = Math.max(radius, chord) * 0.1;
+  let xMin = centerX;
+  let xMax = sagitta + Math.max(radius * 0.42, pad * 3);
+  let yMin = centerY - radius - pad;
+  let yMax = centerY + radius + pad;
+
+  // Expand to full grid squares so no row/column is clipped
+  xMin = Math.floor(xMin);
+  xMax = Math.ceil(xMax);
+  yMin = Math.floor(yMin);
+  yMax = Math.ceil(yMax);
   const width = xMax - xMin;
   const height = yMax - yMin;
   const point = (x, y) => ({ x: x - xMin, y: yMax - y });
   const pixelsWide = sagittaPlot.clientWidth || 640;
   const unit = width / pixelsWide;
-  const fontSize = Math.max(14 * unit, Math.min(width, height) * 0.055);
+  const fontSize = Math.max(14 * unit, Math.min(width, height) * 0.042);
 
   sagittaPlot.setAttribute("viewBox", `0 0 ${width} ${height}`);
+  sagittaPlot.setAttribute("overflow", "hidden");
   sagittaPlot.replaceChildren();
 
   for (let x = Math.floor(xMin); x <= Math.ceil(xMax); x += 1) {
@@ -365,38 +379,93 @@ function drawSagitta({ radius, chord }) {
     }));
   }
 
-  const center = point(radius, half);
-  sagittaPlot.append(svgEl("circle", {
-    cx: center.x, cy: center.y, r: radius,
-    fill: "none", stroke: "#39ff14", "stroke-width": 2,
+  const center = point(centerX, centerY);
+  const arcTip = point(sagitta, half);
+  const arc = [];
+  const arcSteps = 72;
+  for (let i = 0; i <= arcSteps; i += 1) {
+    const angle = -Math.PI / 2 + (Math.PI * i) / arcSteps;
+    arc.push(point(
+      centerX + radius * Math.cos(angle),
+      centerY + radius * Math.sin(angle),
+    ));
+  }
+  sagittaPlot.append(svgEl("polyline", {
+    points: arc.map((p) => `${p.x},${p.y}`).join(" "),
+    fill: "none",
+    stroke: "#39ff14",
+    "stroke-width": 2,
+    "stroke-linecap": "round",
+    "stroke-linejoin": "round",
+    "vector-effect": "non-scaling-stroke",
+  }));
+  sagittaPlot.append(svgEl("line", {
+    x1: center.x, y1: center.y, x2: arcTip.x, y2: arcTip.y,
+    stroke: "#00ffcc", "stroke-width": 1.2, "stroke-dasharray": "5 4",
     "vector-effect": "non-scaling-stroke",
   }));
 
-  const start = point(0, 0);
-  const end = point(0, chord);
+  const chordStart = point(0, 0);
+  const chordEnd = point(0, chord);
   sagittaPlot.append(svgEl("line", {
-    x1: start.x, y1: start.y, x2: end.x, y2: end.y,
-    stroke: "#ff5c5c", "stroke-width": 2, "vector-effect": "non-scaling-stroke",
+    x1: chordStart.x, y1: chordStart.y, x2: chordEnd.x, y2: chordEnd.y,
+    stroke: "#ff5c5c", "stroke-width": 2.2, "vector-effect": "non-scaling-stroke",
+  }));
+  [chordStart, chordEnd].forEach((p) => {
+    sagittaPlot.append(svgEl("circle", {
+      cx: p.x, cy: p.y, r: Math.max(3.2 * unit, fontSize * 0.16),
+      fill: "#ff5c5c",
+    }));
+  });
+
+  const sagStart = point(0, half);
+  sagittaPlot.append(svgEl("line", {
+    x1: sagStart.x, y1: sagStart.y, x2: arcTip.x, y2: arcTip.y,
+    stroke: "#c084fc", "stroke-width": 2.4, "vector-effect": "non-scaling-stroke",
+  }));
+  appendPlotArrow(
+    sagittaPlot,
+    arcTip,
+    0,
+    Math.min(8 * unit, Math.max(sagitta * 0.35, 4 * unit)),
+    "#c084fc",
+  );
+  sagittaPlot.append(svgEl("circle", {
+    cx: center.x, cy: center.y, r: Math.max(3.5 * unit, fontSize * 0.18),
+    fill: "#39ff14",
   }));
 
-  const midY = half;
-  const right = point(sagitta, midY);
-  const left = point(0, midY);
-  sagittaPlot.append(svgEl("line", {
-    x1: left.x, y1: left.y, x2: right.x, y2: right.y,
-    stroke: "#c084fc", "stroke-width": 2, "vector-effect": "non-scaling-stroke",
-  }));
-  drawArrow(left, right, 7 * unit, "#c084fc");
-
+  const radiusLabel = point(centerX + (sagitta - centerX) * 0.38, half + fontSize * 1.7);
   sagittaPlot.append(svgEl("text", {
-    x: right.x + fontSize * 0.2, y: right.y + fontSize * 0.3,
-    fill: "#c084fc", "font-size": fontSize * 1.45, "font-family": "inherit",
+    x: radiusLabel.x,
+    y: radiusLabel.y,
+    fill: "#39ff14",
+    "font-size": fontSize,
+    "font-family": "inherit",
+    "text-anchor": "middle",
+  }, "Radius (Link Length)"));
+
+  const chordLabel = point(-fontSize * 1.15, chord * 0.78);
+  sagittaPlot.append(svgEl("text", {
+    x: chordLabel.x,
+    y: chordLabel.y,
+    fill: "#ff5c5c",
+    "font-size": fontSize,
+    "font-family": "inherit",
+    "text-anchor": "middle",
+    "dominant-baseline": "middle",
+    transform: `rotate(-90 ${chordLabel.x} ${chordLabel.y})`,
+  }, "Chord"));
+
+  const sagLabel = point(sagitta + fontSize * 0.7, half);
+  sagittaPlot.append(svgEl("text", {
+    x: sagLabel.x,
+    y: sagLabel.y,
+    fill: "#c084fc",
+    "font-size": fontSize,
+    "font-family": "inherit",
+    "dominant-baseline": "middle",
   }, "sagitta"));
-
-  sagittaPlot.append(svgEl("text", {
-    x: center.x + fontSize * 1.6, y: center.y,
-    fill: "#39ff14", "font-size": fontSize * 0.9, "font-family": "inherit", "text-anchor": "middle",
-  }, `R = ${formatLoad(radius)}`));
 
   sagittaTitle.textContent = `Sagitta | radius = ${formatLoad(radius)}`;
   drawnSagitta = { radius, chord };
@@ -694,11 +763,24 @@ function drawCog(inputs, cog) {
   const wheelbase = inputs ? inputs.wheelbase : 100;
   const x = cog ? cog.x : track / 2;
   const y = cog ? cog.y : wheelbase / 2;
-  const margin = Math.max(track, wheelbase) * 0.12;
-  const xMin = -margin;
-  const xMax = track + margin;
-  const yMin = -margin;
-  const yMax = wheelbase + margin;
+  // Base geometry bounds
+  let xMin = 0;
+  let xMax = track;
+  let yMin = 0;
+  let yMax = wheelbase;
+
+  // Add margin for labels (tires + COG text on right, frame on left)
+  const labelPad = Math.max(track, wheelbase) * 0.20 + 32;
+  xMin -= labelPad;
+  xMax += labelPad + 8;
+  yMin -= labelPad * 0.75;
+  yMax += labelPad * 0.75;
+
+  // Snap to full grid squares
+  xMin = Math.floor(xMin);
+  xMax = Math.ceil(xMax);
+  yMin = Math.floor(yMin);
+  yMax = Math.ceil(yMax);
   const width = xMax - xMin;
   const height = yMax - yMin;
   const point = (px, py) => ({ x: px - xMin, y: yMax - py });
@@ -895,12 +977,13 @@ function drawTire(t) {
 
   const diameter = t.diameter;
   const width = t.stdWidth;
-  const scaleDraw = 2.6;
+  const scaleDraw = 2.1;
   const halfH = (diameter / 2) * scaleDraw;
   const halfW = (width / 2) * scaleDraw;
   const depth = Math.max(width * 0.55, diameter * 0.18) * scaleDraw;
-  const ground = 8;
-  const cx = size / 2 - 5;
+  const ground = 12;
+  // Center the tire more symmetrically in the viewBox
+  const cx = size / 2 - margin * 0.6;
   const botY = ground;
   const topY = ground + halfH * 2;
   const cy = (topY + botY) / 2;
@@ -966,30 +1049,32 @@ function drawTire(t) {
     }));
   }
 
-  const dimX = px(backX + depth * 0.75) + 8;
+  // Place DIA dimension on the left so it stays inside the viewBox
+  const dimX = px(frontX - depth * 0.75) - 8;
   tirePlot.append(svgEl("line", {
     x1: dimX, y1: py(topY), x2: dimX, y2: py(botY),
     stroke: "#00ffcc", "stroke-width": 0.55,
   }));
   tirePlot.append(svgEl("text", {
-    x: dimX + 1.6,
+    x: dimX - 1.6,
     y: py(cy),
     fill: "#00ffcc",
     "font-size": scale * 1.2,
     "font-family": "inherit",
+    "text-anchor": "end",
     "dominant-baseline": "middle",
   }, `DIA ${formatLoad(diameter)}″`));
 
-  const dimY = py(topY) - 7;
+  const dimY = py(topY) - 4;
   tirePlot.append(svgEl("line", {
     x1: px(frontX), y1: dimY, x2: px(backX), y2: dimY,
     stroke: "#00ffcc", "stroke-width": 0.55,
   }));
   tirePlot.append(svgEl("text", {
     x: px((frontX + backX) / 2),
-    y: dimY - 2.4,
+    y: dimY - 1.8,
     fill: "#00ffcc",
-    "font-size": scale * 1.15,
+    "font-size": scale * 1.0,
     "font-family": "inherit",
     "text-anchor": "middle",
   }, `WIDTH ${formatLoad(t.width)} mm / ${formatLoad(width)}″`));
@@ -1212,7 +1297,7 @@ function drawTireDiagram(svg, outTorque, tireForce) {
 
 function drawCrawlDiagram(svg, vals, outTorque, tireForce) {
   const viewW = 520;
-  const viewH = 420;
+  const viewH = 440;
   svg.setAttribute("viewBox", `0 0 ${viewW} ${viewH}`);
   svg.replaceChildren();
 
@@ -1273,3 +1358,57 @@ crawlUpdate.addEventListener("click", updateCrawl);
 
 // Initial render
 updateCrawl();
+
+const fastenerDiameter = document.getElementById("fastener-diameter");
+const fastenerTensile = document.getElementById("fastener-tensile");
+const fastenerUpdate = document.getElementById("fastener-update");
+const fastenerError = document.getElementById("fastener-error");
+const fastenerResults = document.getElementById("fastener-results");
+
+function readFastenerInputs() {
+  const diameter = Number(fastenerDiameter.value.trim());
+  const tensile = Number(fastenerTensile.value.trim());
+  const diameterValid = Number.isFinite(diameter) && diameter > 0 && diameter <= 4;
+  const tensileValid = Number.isFinite(tensile) && tensile > 0 && tensile <= 500000;
+  if (!diameterValid || !tensileValid) {
+    return { valid: false, error: "Invalid input" };
+  }
+  return { valid: true, diameter, tensile };
+}
+
+function computeFastenerShear(diameter, tensile) {
+  const shearStrength = tensile / Math.sqrt(3);
+  const area = Math.PI * (diameter / 2) ** 2;
+  const singleShear = shearStrength * area;
+  const doubleShear = 2 * singleShear;
+  return { shearStrength, area, singleShear, doubleShear };
+}
+
+function showFastenerResults(data) {
+  fastenerResults.replaceChildren();
+  [
+    ["Shear strength (psi)", data ? formatLoad(data.shearStrength) : "0"],
+    ["Shank area (in²)", data ? formatLoad(data.area) : "0"],
+    ["Single shear capacity (lbf)", data ? formatLoad(data.singleShear) : "0"],
+    ["Double shear capacity (lbf)", data ? formatLoad(data.doubleShear) : "0"],
+  ].forEach(([label, value]) => {
+    fastenerResults.append(document.createElement("p"));
+    fastenerResults.lastChild.textContent = label;
+    fastenerResults.append(document.createElement("strong"));
+    fastenerResults.lastChild.textContent = value;
+  });
+}
+
+function updateFastener() {
+  const input = readFastenerInputs();
+  if (!input.valid) {
+    showFastenerResults(null);
+    showInputError(fastenerError, input.error);
+    return;
+  }
+  clearInputError(fastenerError);
+  showFastenerResults(computeFastenerShear(input.diameter, input.tensile));
+}
+
+fastenerUpdate.addEventListener("click", updateFastener);
+updateFastener();

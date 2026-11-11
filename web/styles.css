@@ -256,6 +256,7 @@ body {
 }
 
 .plot svg {
+  
   width: 100%;
   height: min(36rem, calc(100vh - 8rem));
   text-shadow: none;
@@ -306,6 +307,9 @@ body {
 .swatch.frame { background: #00ffcc; }
 .swatch.axle { background: #39ff14; }
 .swatch.link { background: #c084fc; }
+.swatch.sagitta-radius { background: #00ffcc; }
+.swatch.sagitta-chord { background: #ff5c5c; }
+.swatch.sagitta-height { background: #c084fc; }
 
 .input-error {
   color: #ff8c00;

@@ -19,6 +19,7 @@
       <button class="tab" id="tab-section-3" role="tab" aria-selected="false" aria-controls="panel-section-3" tabindex="-1" type="button">Spring Rate</button>
       <button class="tab" id="tab-cog" role="tab" aria-selected="false" aria-controls="panel-cog" tabindex="-1" type="button">COG</button>
       <button class="tab" id="tab-tire" role="tab" aria-selected="false" aria-controls="panel-tire" tabindex="-1" type="button">Tire Size</button>
+      <button class="tab" id="tab-fastener" role="tab" aria-selected="false" aria-controls="panel-fastener" tabindex="-1" type="button">Fastener Shear</button>
     </div>
 
     <main class="panels">
@@ -91,9 +92,9 @@ tire_force = output_torque × 24 / diameter</div>
             <p class="plot-title" id="sagitta-plot-title"></p>
             <svg id="sagitta-plot" role="img" aria-labelledby="sagitta-plot-title"></svg>
             <ul class="plot-key">
-              <li><span class="swatch frame"></span>Radius</li>
-              <li><span class="swatch axle"></span>Chord (Travel)</li>
-              <li><span class="swatch link"></span>Sagitta</li>
+              <li><span class="swatch sagitta-radius"></span>Radius (Link Length)</li>
+              <li><span class="swatch sagitta-chord"></span>Chord (Travel Window)</li>
+              <li><span class="swatch sagitta-height"></span>Sagitta</li>
             </ul>
           </div>
         </div>
@@ -200,6 +201,28 @@ diameter = 2 × (rim/2 + sidewall)</div>
               <svg id="tire-plot" role="img" aria-labelledby="tire-plot-title"></svg>
             </div>
           </div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-fastener" role="tabpanel" aria-labelledby="tab-fastener" hidden>
+        <div class="split">
+          <form class="inputs" action="#" onsubmit="return false;">
+            <label>
+              Bolt Diameter (in)
+              <input type="text" id="fastener-diameter" value="0.5" placeholder="inches" autocomplete="off">
+            </label>
+            <label>
+              Tensile Strength (psi)
+              <input type="text" id="fastener-tensile" value="150000" placeholder="psi" autocomplete="off">
+            </label>
+            <button id="fastener-update" type="button">Update</button>
+            <span class="input-error" id="fastener-error"></span>
+            <div class="results" id="fastener-results" aria-live="polite"></div>
+            <div class="formula-box">shear = tensile / √3   (Von Mises)
+area = π × (diameter / 2)²
+single_shear = shear_strength × area
+double_shear = 2 × single_shear</div>
+          </form>
         </div>
       </section>
 
